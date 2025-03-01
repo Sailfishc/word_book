@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Vocabulary Count Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #333;
+            text-align: center;
+        }
+        .test-options {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .option-card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .option-card:hover {
+            transform: translateY(-5px);
+        }
+        .test-container {
+            display: none;
+            text-align: center;
+        }
+        .info-container {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e6f7ff;
+            border-left: 4px solid #1890ff;
+            border-radius: 4px;
+        }
+        .word-display {
+            font-size: 24px;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        .primary-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .secondary-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        .tertiary-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .progress {
+            width: 0%;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s;
+        }
+        .results {
+            display: none;
+            margin-top: 20px;
+        }
+        .result-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .vocabulary-size {
+            font-size: 32px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 20px 0;
+        }
+        .band-results {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .band-results th, .band-results td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .band-results th {
+            background-color: #f2f2f2;
+        }
+        .back-home {
+            display: block;
+            margin: 20px auto;
+            text-align: center;
+            text-decoration: none;
+        }
+        .test-complete {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .frequency-info {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>English Vocabulary Count Test</h1>
+        
+        <div id="start-screen">
+            <div class="info-container">
+                <p>This test will help you estimate your English vocabulary size using the COCA 60,000 word frequency list.</p>
+                <p>The test is divided into three sessions, each with 100 words. You can complete them one at a time or all at once.</p>
+                <p>For each word, simply indicate whether you know it or not. A word is considered "known" if you can:</p>
+                <ul style="text-align: left;">
+                    <li>Provide its definition or explain its meaning</li>
+                    <li>Use it correctly in a sentence</li>
+                </ul>
+                <p>Be honest with yourself for accurate results!</p>
+            </div>
+            
+            <div class="test-options">
+                <div class="option-card" onclick="startTest(1)">
+                    <h3>Test Session 1</h3>
+                    <p>100 words • ~10 minutes</p>
+                    <p>First set of vocabulary words</p>
+                </div>
+                <div class="option-card" onclick="startTest(2)">
+                    <h3>Test Session 2</h3>
+                    <p>100 words • ~10 minutes</p>
+                    <p>Second set of vocabulary words</p>
+                </div>
+                <div class="option-card" onclick="startTest(3)">
+                    <h3>Test Session 3</h3>
+                    <p>100 words • ~10 minutes</p>
+                    <p>Third set of vocabulary words</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="test-container" class="test-container">
+            <h2>Vocabulary Test - Session <span id="session-num">1</span></h2>
+            <div class="progress-bar">
+                <div id="progress" class="progress"></div>
+            </div>
+            <div class="word-display" id="current-word"></div>
+            <div class="frequency-info" id="frequency-info"></div>
+            <div class="button-group">
+                <button class="primary-btn" onclick="answerWord(true)">I know this word</button>
+                <button class="secondary-btn" onclick="answerWord(false)">I don't know</button>
+            </div>
+        </div>
+        
+        <div id="test-complete" class="test-complete">
+            <h2>Session <span id="completed-session">1</span> Complete!</h2>
+            <p>You've completed this test session. You can continue with another session or view your current results.</p>
+            <div class="button-group">
+                <button class="primary-btn" onclick="viewResults()">View Current Results</button>
+                <button class="tertiary-btn" onclick="window.location.href = '/vocab_test'">Take Another Session</button>
+            </div>
+        </div>
+
+        <div id="results" class="results">
+            <h2>Vocabulary Size Estimate</h2>
+            <div class="result-card">
+                <div class="vocabulary-size" id="vocab-size">0</div>
+                <p>This is an estimate based on your knowledge of words from different frequency bands.</p>
+                <p>The more test sessions you complete, the more accurate your estimate will be.</p>
+            </div>
+            
+            <h3>Results by Frequency Band</h3>
+            <table class="band-results" id="band-results">
+                <thead>
+                    <tr>
+                        <th>Frequency Band</th>
+                        <th>Words Tested</th>
+                        <th>Words Known</th>
+                        <th>Percentage</th>
+                        <th>Estimated Words Known</th>
+                    </tr>
+                </thead>
+                <tbody id="band-results-body">
+                    <!-- Results will be inserted here -->
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="4">Total Vocabulary Size Estimate:</th>
+                        <th id="total-estimate">0</th>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            <div class="button-group">
+                <button class="tertiary-btn" onclick="window.location.href = '/vocab_test'">Take Another Session</button>
+                <button class="secondary-btn" onclick="window.location.href = '/'">Back to Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSession = 1;
+        let currentWordIndex = 0;
+        let testWords = [];
+        let userAnswers = {};
+        
+        // Load previously saved answers from localStorage if available
+        const savedAnswers = JSON.parse(localStorage.getItem('vocabTestAnswers') || '{}');
+        const savedResults = JSON.parse(localStorage.getItem('vocabTestResults') || '{}');
+        
+        function startTest(session) {
+            currentSession = session;
+            document.getElementById('session-num').textContent = session;
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('test-container').style.display = 'block';
+            document.getElementById('test-complete').style.display = 'none';
+            document.getElementById('results').style.display = 'none';
+            
+            // Reset progress
+            currentWordIndex = 0;
+            updateProgress(0, 100);
+            
+            // Load words for this session
+            fetch(`/api/vocab_test/words?session=${session}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        testWords = data.words;
+                        showNextWord();
+                    } else {
+                        alert('Error loading test words: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while loading the test');
+                });
+        }
+        
+        function showNextWord() {
+            if (currentWordIndex < testWords.length) {
+                const currentWord = testWords[currentWordIndex];
+                document.getElementById('current-word').textContent = currentWord.word;
+                
+                // Show frequency info
+                const rankInfo = `Frequency rank: ${currentWord.rank} (Band ${currentWord.band}/10)`;
+                document.getElementById('frequency-info').textContent = rankInfo;
+                
+                updateProgress(currentWordIndex, testWords.length);
+            } else {
+                // Test is complete
+                completeTest();
+            }
+        }
+        
+        function answerWord(known) {
+            if (currentWordIndex < testWords.length) {
+                const currentWord = testWords[currentWordIndex];
+                
+                // Save answer
+                if (!userAnswers[currentSession]) {
+                    userAnswers[currentSession] = {};
+                }
+                userAnswers[currentSession][currentWord.word] = {
+                    known: known,
+                    rank: currentWord.rank,
+                    band: currentWord.band
+                };
+                
+                // Save to localStorage
+                localStorage.setItem('vocabTestAnswers', JSON.stringify(userAnswers));
+                
+                // Move to next word
+                currentWordIndex++;
+                showNextWord();
+            }
+        }
+        
+        function updateProgress(current, total) {
+            const percentage = (current / total) * 100;
+            document.getElementById('progress').style.width = `${percentage}%`;
+        }
+        
+        function completeTest() {
+            document.getElementById('test-container').style.display = 'none';
+            document.getElementById('test-complete').style.display = 'block';
+            document.getElementById('completed-session').textContent = currentSession;
+            
+            // Calculate results
+            calculateResults();
+        }
+        
+        function viewResults() {
+            document.getElementById('test-complete').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            
+            // Populate results from saved data
+            displayResults();
+        }
+        
+        function calculateResults() {
+            // Send all answers to the server for calculation
+            fetch('/api/vocab_test/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    answers: userAnswers
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Save results
+                    localStorage.setItem('vocabTestResults', JSON.stringify(data.results));
+                } else {
+                    alert('Error calculating results: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while calculating results');
+            });
+        }
+        
+        function displayResults() {
+            const results = JSON.parse(localStorage.getItem('vocabTestResults') || '{}');
+            
+            if (results.total_vocab_size) {
+                document.getElementById('vocab-size').textContent = results.total_vocab_size.toLocaleString();
+                document.getElementById('total-estimate').textContent = results.total_vocab_size.toLocaleString();
+                
+                // Populate band results table
+                const tableBody = document.getElementById('band-results-body');
+                tableBody.innerHTML = '';
+                
+                if (results.band_results) {
+                    results.band_results.forEach(band => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>Band ${band.band} (${band.range})</td>
+                            <td>${band.tested}</td>
+                            <td>${band.known}</td>
+                            <td>${band.percentage}%</td>
+                            <td>${band.estimated_known.toLocaleString()}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                }
+            } else {
+                document.getElementById('vocab-size').textContent = "Complete a test session to see results";
+            }
+        }
+        
+        // Check if there are saved results to display
+        window.onload = function() {
+            if (Object.keys(savedResults).length > 0) {
+                // Add a button to view previous results
+                const startScreen = document.getElementById('start-screen');
+                const resultButton = document.createElement('div');
+                resultButton.className = 'button-group';
+                resultButton.style.marginTop = '20px';
+                resultButton.innerHTML = '<button class="tertiary-btn" onclick="viewResults()">View Previous Results</button>';
+                startScreen.appendChild(resultButton);
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocabulary Assessment</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        .assessment-options {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .option-card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .option-card:hover {
+            transform: translateY(-5px);
+        }
+        .test-container {
+            display: none;
+            text-align: center;
+        }
+        .word-display {
+            font-size: 24px;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        .primary-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .secondary-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .progress {
+            width: 0%;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s;
+        }
+        .results {
+            display: none;
+            margin-top: 20px;
+        }
+        .result-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .level-indicator {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .history-chart {
+            width: 100%;
+            height: 200px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vocabulary Level Assessment</h1>
+        
+        <div id="start-screen">
+            <div class="assessment-options">
+                <div class="option-card" onclick="startTest('quick')">
+                    <h3>Quick Assessment</h3>
+                    <p>50 words • 5-7 minutes</p>
+                    <p>Get a quick estimate of your vocabulary level</p>
+                </div>
+                <div class="option-card" onclick="startTest('adaptive')">
+                    <h3>Adaptive Assessment</h3>
+                    <p>25 words • 3-5 minutes</p>
+                    <p>More precise measurement that adapts to your level</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="test-container" class="test-container">
+            <div class="progress-bar">
+                <div id="progress" class="progress"></div>
+            </div>
+            <div class="word-display" id="current-word"></div>
+            <div class="button-group">
+                <button class="primary-btn" onclick="answerWord(true)">I know this word</button>
+                <button class="secondary-btn" onclick="answerWord(false)">I don't know</button>
+            </div>
+        </div>
+
+        <div id="results" class="results">
+            <h2>Assessment Results</h2>
+            <div class="result-card">
+                <div class="level-indicator" id="cefr-level"></div>
+                <p>Estimated Vocabulary Size: <span id="vocab-size"></span> words</p>
+                <p>Confidence Level: <span id="confidence-level"></span>%</p>
+            </div>
+            <div class="history-chart" id="history-chart"></div>
+            <div class="button-group">
+                <button class="primary-btn" onclick="startTest(currentTestType)">Take Another Test</button>
+                <button class="secondary-btn" onclick="window.location.href='/'">Back to Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTestType = 'quick';
+        let currentTestId = null;
+        let currentUserId = localStorage.getItem('userId') || null;
+        let answers = {};
+        let remainingWords = [];
+        
+        async function startTest(testType) {
+            currentTestType = testType;
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('test-container').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            
+            // Reset progress and answers
+            document.getElementById('progress').style.width = '0%';
+            answers = {};
+            
+            try {
+                const response = await fetch('/api/assessment/generate_test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        test_type: testType,
+                        user_id: currentUserId
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    currentTestId = data.test_id;
+                    currentUserId = data.user_id;
+                    localStorage.setItem('userId', currentUserId);
+                    
+                    if (testType === 'quick') {
+                        remainingWords = data.words;
+                        showNextWord();
+                    } else {
+                        // Show first adaptive word
+                        document.getElementById('current-word').textContent = data.words[0];
+                    }
+                }
+            } catch (error) {
+                console.error('Error starting test:', error);
+                alert('Failed to start the test. Please try again.');
+            }
+        }
+        
+        async function answerWord(known) {
+            const currentWord = document.getElementById('current-word').textContent;
+            answers[currentWord] = known;
+            
+            if (currentTestType === 'quick') {
+                updateProgress();
+                if (remainingWords.length > 0) {
+                    showNextWord();
+                } else {
+                    await submitTest();
+                }
+            } else {
+                // Handle adaptive test
+                try {
+                    const response = await fetch('/api/assessment/adaptive/next_question', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            test_id: currentTestId,
+                            knew_previous: known
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        if (data.complete) {
+                            await submitTest();
+                        } else {
+                            document.getElementById('current-word').textContent = data.word;
+                            updateProgress(data.question_number, data.total_questions);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error in adaptive test:', error);
+                    alert('An error occurred. Please try again.');
+                }
+            }
+        }
+        
+        function showNextWord() {
+            const word = remainingWords.shift();
+            document.getElementById('current-word').textContent = word;
+        }
+        
+        function updateProgress(current, total) {
+            let percentage;
+            if (currentTestType === 'quick') {
+                percentage = (Object.keys(answers).length / 50) * 100;
+            } else {
+                percentage = (current / total) * 100;
+            }
+            document.getElementById('progress').style.width = `${percentage}%`;
+        }
+        
+        async function submitTest() {
+            try {
+                const response = await fetch('/api/assessment/submit_test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        test_id: currentTestId,
+                        user_id: currentUserId,
+                        answers: answers
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showResults(data.result);
+                }
+            } catch (error) {
+                console.error('Error submitting test:', error);
+                alert('Failed to submit test results. Please try again.');
+            }
+        }
+        
+        function showResults(result) {
+            document.getElementById('test-container').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            
+            document.getElementById('cefr-level').textContent = `CEFR Level: ${result.cefr_level}`;
+            document.getElementById('vocab-size').textContent = result.vocabulary_size.toLocaleString();
+            document.getElementById('confidence-level').textContent = result.confidence;
+            
+            loadHistory();
+        }
+        
+        async function loadHistory() {
+            try {
+                const response = await fetch(`/api/assessment/history/${currentUserId}`);
+                const data = await response.json();
+                if (data.status === 'success') {
+                    // Here you could add code to display a chart of historical results
+                    // using a library like Chart.js if desired
+                }
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+    </script>
+</body>
+</html>

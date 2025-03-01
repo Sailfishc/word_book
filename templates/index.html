@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocabulary Book Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .section {
+            flex: 1;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        input, button, select {
+            padding: 8px;
+            margin: 5px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #fff;
+            border-radius: 3px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .word-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+        }
+        .file-upload {
+            margin: 10px 0;
+        }
+        .file-upload input[type="file"] {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .upload-result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 3px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Vocabulary Book Manager</h1>
+    <div style="text-align: center; margin-bottom: 20px;">
+        <a href="/assessment" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; margin-right: 10px;">
+            Take Vocabulary Assessment
+        </a>
+        <a href="/vocab_test" style="display: inline-block; padding: 10px 20px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+            Test Vocabulary Size
+        </a>
+    </div>
+    
+    <div class="container">
+        <div class="section">
+            <h2>Create New Book</h2>
+            <input type="text" id="new-book-name" placeholder="Enter book name">
+            <button onclick="createBook()">Create Book</button>
+            
+            <h2>Available Books</h2>
+            <ul id="book-list">
+                {% for book in books %}
+                <li onclick="loadBook('{{ book }}')">{{ book }}</li>
+                {% endfor %}
+            </ul>
+            
+            <h2>Extract Words from Webpage</h2>
+            <input type="text" id="webpage-url" placeholder="Enter webpage URL">
+            <button onclick="extractWebpage()">Extract Words</button>
+            <div id="extraction-result" style="margin-top: 10px; display: none;">
+                <p id="extraction-message"></p>
+                <p>File: <span id="extraction-file"></span></p>
+                <p>Word count: <span id="extraction-count"></span></p>
+            </div>
+            
+            <h2>Upload EPUB File</h2>
+            <div class="file-upload">
+                <input type="file" id="epub-file" accept=".epub">
+                <button onclick="uploadEpub()">Extract Words</button>
+            </div>
+            <div id="epub-result" class="upload-result">
+                <p id="epub-message"></p>
+                <p>File: <span id="epub-output-file"></span></p>
+                <p>Word count: <span id="epub-count"></span></p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Current Book: <span id="current-book">None</span></h2>
+            
+            <h3>Add Single Word</h3>
+            <input type="text" id="new-word" placeholder="Enter a word">
+            <button onclick="addWord()">Add Word</button>
+            
+            <h3>Add Multiple Words</h3>
+            <textarea id="batch-words" placeholder="Enter words, one per line"></textarea>
+            <button onclick="addBatchWords()">Add Words</button>
+            
+            <h3>Add Words from Webpage</h3>
+            <input type="text" id="webpage-url-to-book" placeholder="Enter webpage URL">
+            <button onclick="extractToBook()" id="extract-to-book-btn" disabled>Add to Current Book</button>
+            
+            <h3>Add Words from EPUB</h3>
+            <div class="file-upload">
+                <input type="file" id="epub-file-to-book" accept=".epub">
+                <button onclick="epubToBook()" id="epub-to-book-btn" disabled>Add to Current Book</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Words in Book</h2>
+            <div class="word-list">
+                <ul id="word-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentBook = '';
+        
+        // Load books on page load
+        window.onload = function() {
+            // Books are already loaded from the server
+        };
+        
+        // Create a new vocabulary book
+        function createBook() {
+            const bookName = document.getElementById('new-book-name').value.trim();
+            if (!bookName) {
+                alert('Please enter a book name');
+                return;
+            }
+            
+            fetch('/api/books', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: bookName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                    // Add the new book to the list
+                    const bookList = document.getElementById('book-list');
+                    const li = document.createElement('li');
+                    li.textContent = bookName;
+                    li.onclick = function() { loadBook(bookName); };
+                    bookList.appendChild(li);
+                    
+                    // Clear the input
+                    document.getElementById('new-book-name').value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while creating the book');
+            });
+        }
+        
+        // Load a vocabulary book
+        function loadBook(bookName) {
+            currentBook = bookName;
+            document.getElementById('current-book').textContent = bookName;
+            
+            // Enable the extract-to-book buttons
+            document.getElementById('extract-to-book-btn').disabled = false;
+            document.getElementById('epub-to-book-btn').disabled = false;
+            
+            fetch(`/api/books/${bookName}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    // Display the words
+                    const wordList = document.getElementById('word-list');
+                    wordList.innerHTML = '';
+                    
+                    data.words.forEach(word => {
+                        const li = document.createElement('li');
+                        li.textContent = word;
+                        wordList.appendChild(li);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while loading the book');
+            });
+        }
+        
+        // Add a single word to the current book
+        function addWord() {
+            if (!currentBook) {
+                alert('Please select a book first');
+                return;
+            }
+            
+            const word = document.getElementById('new-word').value.trim();
+            if (!word) {
+                alert('Please enter a word');
+                return;
+            }
+            
+            fetch(`/api/books/${currentBook}/words`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ word: word })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                    // Add the word to the list
+                    const wordList = document.getElementById('word-list');
+                    const li = document.createElement('li');
+                    li.textContent = word;
+                    wordList.appendChild(li);
+                    
+                    // Clear the input
+                    document.getElementById('new-word').value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while adding the word');
+            });
+        }
+        
+        // Add multiple words to the current book
+        function addBatchWords() {
+            if (!currentBook) {
+                alert('Please select a book first');
+                return;
+            }
+            
+            const batchText = document.getElementById('batch-words').value.trim();
+            if (!batchText) {
+                alert('Please enter some words');
+                return;
+            }
+            
+            const words = batchText.split('\n').map(word => word.trim()).filter(word => word);
+            
+            fetch(`/api/books/${currentBook}/words/batch`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ words: words })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                    // Reload the book to show the updated word list
+                    loadBook(currentBook);
+                    
+                    // Clear the textarea
+                    document.getElementById('batch-words').value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while adding the words');
+            });
+        }
+        
+        // Extract words from a webpage
+        function extractWebpage() {
+            const url = document.getElementById('webpage-url').value.trim();
+            if (!url) {
+                alert('Please enter a webpage URL');
+                return;
+            }
+            
+            // Show loading indicator
+            document.getElementById('extraction-result').style.display = 'none';
+            
+            // Create FormData object
+            const formData = new FormData();
+            formData.append('url', url);
+            
+            fetch('/api/extract-webpage', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    // Display the result
+                    document.getElementById('extraction-message').textContent = data.message;
+                    document.getElementById('extraction-file').textContent = data.file;
+                    document.getElementById('extraction-count').textContent = data.word_count;
+                    document.getElementById('extraction-result').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while extracting words from the webpage');
+            });
+        }
+        
+        // Extract words from a webpage and add to the current book
+        function extractToBook() {
+            if (!currentBook) {
+                alert('Please select a book first');
+                return;
+            }
+            
+            const url = document.getElementById('webpage-url-to-book').value.trim();
+            if (!url) {
+                alert('Please enter a webpage URL');
+                return;
+            }
+            
+            // Create FormData object
+            const formData = new FormData();
+            formData.append('url', url);
+            formData.append('book_name', currentBook);
+            
+            fetch('/api/extract-to-book', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                    // Reload the book to show the updated word list
+                    loadBook(currentBook);
+                    
+                    // Clear the input
+                    document.getElementById('webpage-url-to-book').value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while extracting words from the webpage');
+            });
+        }
+        
+        // Upload and process an EPUB file
+        function uploadEpub() {
+            const fileInput = document.getElementById('epub-file');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select an EPUB file');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            if (!file.name.toLowerCase().endsWith('.epub')) {
+                alert('Please select an EPUB file');
+                return;
+            }
+            
+            // Create a FormData object to send the file
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Show loading indicator
+            document.getElementById('epub-result').style.display = 'none';
+            
+            fetch('/api/upload-epub', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    // Display the result
+                    document.getElementById('epub-message').textContent = data.message;
+                    document.getElementById('epub-output-file').textContent = data.file;
+                    document.getElementById('epub-count').textContent = data.word_count;
+                    document.getElementById('epub-result').style.display = 'block';
+                    
+                    // Clear the file input
+                    fileInput.value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing the EPUB file');
+            });
+        }
+        
+        // Extract words from an EPUB file and add to the current book
+        function epubToBook() {
+            if (!currentBook) {
+                alert('Please select a book first');
+                return;
+            }
+            
+            const fileInput = document.getElementById('epub-file-to-book');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select an EPUB file');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            if (!file.name.toLowerCase().endsWith('.epub')) {
+                alert('Please select an EPUB file');
+                return;
+            }
+            
+            // Create a FormData object to send the file and book name
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('book_name', currentBook);
+            
+            fetch('/api/epub-to-book', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                    // Reload the book to show the updated word list
+                    loadBook(currentBook);
+                    
+                    // Clear the file input
+                    fileInput.value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing the EPUB file');
+            });
+        }
+    </script>
+</body>
+</html>
