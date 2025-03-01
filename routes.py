@@ -4,7 +4,7 @@ import uuid
 from utils import allowed_file, get_app_dirs
 from book_manager import (get_all_books, get_words_from_book, 
                         add_word_to_book, add_words_to_book, 
-                        create_book, book_exists)
+                        create_book, book_exists, mark_word_as_done, get_done_words)
 from web_extractor import extract_words_from_webpage, save_webpage_words
 from epub_processor import parse_epub_file, save_epub_file, save_epub_words
 from vocab_assessment import VocabularyAssessment, generate_adaptive_test, get_next_adaptive_question
@@ -23,7 +23,8 @@ bp = Blueprint('vocabulary', __name__)
 @bp.route('/')
 def index():
     """Render the main application page"""
-    return render_template('index.html')
+    books = get_all_books()
+    return render_template('index.html', books=books)
 
 @bp.route('/assessment')
 def assessment():
@@ -411,6 +412,48 @@ def calculate_vocab_test_results():
     return jsonify({
         'status': 'success',
         'results': results
+    })
+
+# API endpoints for managing done words
+@bp.route('/api/words/done', methods=['POST'])
+def mark_done():
+    """API endpoint to mark a word as done (recognized)"""
+    data = request.get_json()
+    if not data or 'word' not in data:
+        return jsonify({
+            'status': 'error',
+            'message': 'Word is required'
+        }), 400
+    
+    word = data['word']
+    
+    # Get list of books that contain this word (for response info)
+    books_containing_word = []
+    all_books = get_all_books()
+    for book in all_books:
+        if book != 'done' and word in get_words_from_book(book):
+            books_containing_word.append(book)
+    
+    if mark_word_as_done(word):
+        return jsonify({
+            'status': 'success',
+            'message': f'Word "{word}" marked as done successfully',
+            'removed_from_books': books_containing_word
+        })
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': f'Word "{word}" is already marked as done'
+        }), 400
+
+@bp.route('/api/words/done', methods=['GET'])
+def get_done():
+    """API endpoint to get all words marked as done"""
+    words = get_done_words()
+    return jsonify({
+        'status': 'success',
+        'word_count': len(words),
+        'words': words
     })
 
 # Initialize vocabulary assessment

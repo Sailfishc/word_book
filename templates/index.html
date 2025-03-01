@@ -149,6 +149,11 @@
             <div class="word-list">
                 <ul id="word-list"></ul>
             </div>
+            <h3>Done Words</h3>
+            <button onclick="loadDoneWords()">View Done Words</button>
+            <div class="word-list">
+                <ul id="done-words-list"></ul>
+            </div>
         </div>
     </div>
 
@@ -219,7 +224,40 @@
                     
                     data.words.forEach(word => {
                         const li = document.createElement('li');
-                        li.textContent = word;
+                        li.style.display = 'flex';
+                        li.style.alignItems = 'center';
+                        
+                        // Create word span
+                        const wordSpan = document.createElement('span');
+                        wordSpan.textContent = word;
+                        wordSpan.style.flex = '1';
+                        
+                        // Create mark as done button - more compact
+                        const markDoneBtn = document.createElement('button');
+                        markDoneBtn.textContent = '✓';
+                        markDoneBtn.title = 'Mark as Done'; // Show text on hover
+                        markDoneBtn.style.marginLeft = '10px';
+                        markDoneBtn.style.fontSize = '0.9em';
+                        markDoneBtn.style.padding = '1px 6px';
+                        markDoneBtn.style.borderRadius = '3px';
+                        markDoneBtn.style.backgroundColor = '#eee';
+                        markDoneBtn.style.border = '1px solid #ddd';
+                        markDoneBtn.style.cursor = 'pointer';
+                        
+                        // Create status message span
+                        const statusSpan = document.createElement('span');
+                        statusSpan.style.marginLeft = '10px';
+                        statusSpan.style.fontSize = '0.8em';
+                        statusSpan.style.display = 'none';
+                        
+                        markDoneBtn.onclick = function(e) {
+                            e.stopPropagation(); // Prevent the li click event
+                            markWordAsDone(word, statusSpan, li);
+                        };
+                        
+                        li.appendChild(wordSpan);
+                        li.appendChild(markDoneBtn);
+                        li.appendChild(statusSpan);
                         wordList.appendChild(li);
                     });
                 }
@@ -481,6 +519,87 @@
             .catch(error => {
                 console.error('Error:', error);
                 alert('An error occurred while processing the EPUB file');
+            });
+        }
+        // Mark a word as done
+        function markWordAsDone(word, statusSpan, wordLi) {
+            fetch('/api/words/done', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ word: word })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display status message inline
+                statusSpan.style.display = 'inline';
+                
+                if (data.status === 'error') {
+                    statusSpan.textContent = '✘';
+                    statusSpan.style.color = '#d9534f'; // Red color for error
+                    
+                    // Hide the message after a very short time
+                    setTimeout(() => {
+                        statusSpan.style.display = 'none';
+                    }, 700);
+                } else {
+                    // If the word was in the current book, remove it immediately
+                    if (data.removed_from_books.includes(currentBook)) {
+                        wordLi.remove(); // Immediately remove the word from the list
+                    } else {
+                        // Word wasn't in current book, just show brief confirmation
+                        statusSpan.textContent = '✓';
+                        statusSpan.style.color = '#5cb85c'; // Green color for success
+                        
+                        // Hide the status after just a short time
+                        setTimeout(() => {
+                            statusSpan.style.display = 'none';
+                        }, 700);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusSpan.style.display = 'inline';
+                statusSpan.textContent = '✘';
+                statusSpan.style.color = '#d9534f';
+                
+                // Hide the message after a very short time
+                setTimeout(() => {
+                    statusSpan.style.display = 'none';
+                }, 700);
+            });
+        }
+        
+        // Load all done words
+        function loadDoneWords() {
+            fetch('/api/words/done')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'error') {
+                    alert(data.message);
+                } else {
+                    // Display the done words
+                    const doneWordsList = document.getElementById('done-words-list');
+                    doneWordsList.innerHTML = '';
+                    
+                    if (data.words.length === 0) {
+                        const li = document.createElement('li');
+                        li.textContent = 'No words marked as done yet';
+                        doneWordsList.appendChild(li);
+                    } else {
+                        data.words.forEach(word => {
+                            const li = document.createElement('li');
+                            li.textContent = word;
+                            doneWordsList.appendChild(li);
+                        });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while loading done words');
             });
         }
     </script>
